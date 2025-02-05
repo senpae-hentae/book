@@ -4,6 +4,7 @@ from datetime import datetime
 BOOKS_FILE = "books.json"
 SALES_FILE = "sales.json"
 USERS_FILE = "users.json"
+CURRENT_USER_FILE = "current_user.json"
 
 def load_data(file):
     try:
@@ -15,6 +16,30 @@ def load_data(file):
 def save_data(file, data):
     with open(file, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
+
+# Login funksiyasi
+def login():
+    users = load_data(USERS_FILE)
+    username = input("Username: ")
+
+    user = next((u for u in users if u["username"] == username), None)
+    if user:
+        save_data(CURRENT_USER_FILE, user)
+        print(f"Xush kelibsiz, {user['username']}!")
+        return True
+    else:
+        print("Bunday foydalanuvchi mavjud emas!")
+        return False
+
+# Logout funksiyasi
+def logout():
+    save_data(CURRENT_USER_FILE, {})
+    print("Tizimdan chiqildi!")
+
+# Tizimga kim kirganini tekshirish
+def get_current_user():
+    user = load_data(CURRENT_USER_FILE)
+    return user if user else None
 
 # 1. Kitob klassi
 class Book:
@@ -33,28 +58,7 @@ class Book:
         save_data(BOOKS_FILE, books)
         print("Kitob qo'shildi!")
 
-    def __str__(self):
-        return f"{self.id}. {self.title} - {self.author} ({self.genre}) | {self.price} so‘m | {self.quantity} dona"
-
-# 2. Foydalanuvchi klassi
-class User:
-    def __init__(self, username, address):
-        users = load_data(USERS_FILE)
-        self.user_id = len(users) + 1
-        self.username = username
-        self.address = address
-        self.purchased_books = []
-
-    def save(self):
-        users = load_data(USERS_FILE)
-        users.append(self.__dict__)
-        save_data(USERS_FILE, users)
-        print("Foydalanuvchi qo‘shildi!")
-
-    def __str__(self):
-        return f"ID: {self.user_id}, Username: {self.username}, Address: {self.address}"
-
-# 3. Sotuv klassi
+# 2. Sotuv klassi
 class Sale:
     @staticmethod
     def sell(book_id, user_id):
@@ -80,7 +84,7 @@ class Sale:
                         save_data(SALES_FILE, sales)
                         save_data(USERS_FILE, users)
 
-                        print(f"{user['username']} tomonidan '{book['title']}' sotib olindi.")
+                        print(f"{user['username']} tomonidan '{book['title']}' kitob sotib olindi.")
                         return
         print("Bu kitob mavjud emas yoki tugagan!")
 
@@ -95,49 +99,57 @@ class Sale:
 
 def main():
     while True:
-        print("\n1. Kitob qo‘shish")
-        print("2. Kitoblarni ko‘rish")
-        print("3. Foydalanuvchi qo‘shish")
-        print("4. Kitob sotish")
-        print("5. Sotuv tarixini ko‘rish")
-        print("6. Chiqish")
+        user = get_current_user()
 
-        choice = input("Tanlang: ")
+        if not user:
+            print("\n1. Kirish (Log in)")
+            print("2. Dasturdan chiqish")
+            choice = input("Tanlang: ")
 
-        if choice == "1":
-            title = input("Kitob nomi: ")
-            author = input("Muallif: ")
-            genre = input("Janr: ")
-            price = float(input("Narxi: "))
-            quantity = int(input("Miqdori: "))
-            Book(title, author, genre, price, quantity).save()
-
-        elif choice == "2":
-            books = load_data(BOOKS_FILE)
-            if not books:
-                print("Afsus, hech qanday kitob yo‘q!")
+            if choice == "1":
+                login()
+            elif choice == "2":
+                break
             else:
-                for book in books:
-                    print(f"ID: {book['id']}, {book['title']} - {book['author']} ({book['genre']}) | {book['price']} so‘m | Qolgan: {book['quantity']} dona")
-
-        elif choice == "3":
-            username = input("Foydalanuvchi ismi: ")
-            address = input("Manzil: ")
-            User(username, address).save()
-
-        elif choice == "4":
-            book_id = int(input("Sotilayotgan kitob ID: "))
-            user_id = int(input("Foydalanuvchi ID: "))
-            Sale.sell(book_id, user_id)
-
-        elif choice == "5":
-            Sale.view_all()
-
-        elif choice == "6":
-            break
-
+                print("Noto‘g‘ri tanlov! Qaytadan urinib ko‘ring.")
         else:
-            print("Noto‘g‘ri tanlov! Qaytadan urinib ko‘ring.")
+            print(f"\nXush kelibsiz, {user['username']}!")
+            print("1. Kitob qo‘shish")
+            print("2. Kitoblarni ko‘rish")
+            print("3. Kitob sotish")
+            print("4. Sotuv tarixini ko‘rish")
+            print("5. Chiqish (Log out)")
+
+            choice = input("Tanlang: ")
+
+            if choice == "1":
+                title = input("Kitob nomi: ")
+                author = input("Muallif: ")
+                genre = input("Janr: ")
+                price = float(input("Narxi: "))
+                quantity = int(input("Miqdori: "))
+                Book(title, author, genre, price, quantity).save()
+
+            elif choice == "2":
+                books = load_data(BOOKS_FILE)
+                if not books:
+                    print("Afsus, hech qanday kitob yo‘q!")
+                else:
+                    for book in books:
+                        print(f"ID: {book['id']}, {book['title']} - {book['author']} ({book['genre']}) | {book['price']} so‘m | Qolgan: {book['quantity']} dona")
+
+            elif choice == "3":
+                book_id = int(input("Sotilayotgan kitob ID: "))
+                Sale.sell(book_id, user["user_id"])
+
+            elif choice == "4":
+                Sale.view_all()
+
+            elif choice == "5":
+                logout()
+
+            else:
+                print("Noto‘g‘ri tanlov! Qaytadan urinib ko‘ring.")
 
 if __name__ == "__main__":
     main()
